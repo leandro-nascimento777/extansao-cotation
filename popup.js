@@ -323,6 +323,9 @@ function updateProviderHelp(provider) {
 
 async function initAISettings() {
   currentAiSettings = await getAISettings();
+  if (currentAiSettings.apiKey) {
+    await saveAISettings(currentAiSettings);
+  }
   aiProviderSelect.value = currentAiSettings.provider || "gemini";
   populateModelOptions(aiProviderSelect.value, currentAiSettings.model);
   aiApiKeyInput.value = currentAiSettings.apiKey || "";
@@ -382,8 +385,11 @@ async function initAISettings() {
     }, 1200);
   });
 
-  btnAnalyzeAI.addEventListener("click", () => {
+  btnAnalyzeAI.addEventListener("click", async () => {
     if (lastLoadedExtraction) {
+      if (!currentAiSettings?.apiKey) {
+        currentAiSettings = await getAISettings();
+      }
       runAIAnalysis(lastLoadedExtraction, true);
     }
   });
@@ -391,6 +397,9 @@ async function initAISettings() {
 
 async function runAIAnalysis(extraction, force = false) {
   if (!extraction) return;
+  if (!currentAiSettings?.apiKey) {
+    currentAiSettings = await getAISettings();
+  }
   if (!currentAiSettings?.apiKey) {
     if (force) {
       alert("Por favor, configure sua chave de API nas opções de IA (botão ⚙️ IA) antes de usar.");

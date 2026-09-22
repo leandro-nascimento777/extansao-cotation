@@ -5,9 +5,15 @@
 
 export const AI_STORAGE_KEY = "aiSettings";
 
+let localApiKey = "";
+try {
+  const mod = await import("./config.js");
+  localApiKey = mod?.LOCAL_CONFIG?.geminiApiKey || "";
+} catch (_) {}
+
 export const DEFAULT_AI_SETTINGS = {
   provider: "gemini", // "gemini" | "openai"
-  apiKey: "",
+  apiKey: localApiKey,
   model: "gemini-flash-latest",
   autoUseAI: true,
 };
@@ -15,7 +21,9 @@ export const DEFAULT_AI_SETTINGS = {
 export async function getAISettings() {
   return new Promise((resolve) => {
     chrome.storage.local.get(AI_STORAGE_KEY, (data) => {
-      resolve({ ...DEFAULT_AI_SETTINGS, ...(data[AI_STORAGE_KEY] || {}) });
+      const stored = data[AI_STORAGE_KEY] || {};
+      const apiKey = stored.apiKey || localApiKey || DEFAULT_AI_SETTINGS.apiKey;
+      resolve({ ...DEFAULT_AI_SETTINGS, ...stored, apiKey });
     });
   });
 }
