@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<title>Orçamento de Voos</title>
+<link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header>
+    <div class="header-main">
+      <div>
+        <h1>✈️ Orçamento de Voos</h1>
+        <p class="subtitle">Selecione a área com os voos, revise os dados e gere a proposta.</p>
+      </div>
+      <button id="btnToggleSettings" class="btn btn-ghost small-btn ai-settings-btn" title="Configurações de Inteligência Artificial">
+        ⚙️ IA
+      </button>
+    </div>
+  </header>
+
+  <!-- Painel de Configurações da IA -->
+  <section id="aiSettingsPanel" class="panel ai-settings-panel hidden">
+    <div class="panel-header">
+      <h2>⚙️ Configurações de IA</h2>
+      <button id="btnCloseSettings" class="btn btn-ghost small-btn">✕ Fechar</button>
+    </div>
+    <p class="muted small">A IA analisa o print da seleção, reconhece logotipos das companhias aéreas, tabelas de ida/volta e preenche os campos automaticamente com precisão máxima.</p>
+    
+    <div class="field-grid" style="margin-top: 8px;">
+      <label>Provedor de IA
+        <select id="aiProvider">
+          <option value="gemini">Google Gemini (Recomendado - Gratuito)</option>
+          <option value="openai">OpenAI (ChatGPT)</option>
+        </select>
+      </label>
+      <label>Modelo
+        <select id="aiModel">
+          <!-- Opções preenchidas dinamicamente via JS -->
+        </select>
+      </label>
+    </div>
+
+    <label class="full" style="margin-top: 8px;">Chave de API (API Key)
+      <div class="password-wrapper">
+        <input type="password" id="aiApiKey" placeholder="Cole sua chave de API aqui" />
+        <button type="button" id="btnToggleApiKeyVisibility" class="btn-eye" title="Mostrar/ocultar">👁️</button>
+      </div>
+    </label>
+
+    <div class="ai-provider-help">
+      <small id="geminiHelp" class="muted small">
+        💡 Obtenha uma chave 100% gratuita no <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer">Google AI Studio</a>.
+      </small>
+      <small id="openaiHelp" class="muted small hidden">
+        💡 Chave obtida em sua conta na <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer">OpenAI Platform</a>.
+      </small>
+    </div>
+
+    <label class="checkbox-label" style="margin-top: 10px;">
+      <input type="checkbox" id="aiAutoUse" checked />
+      <span>Analisar prints automaticamente com IA ao capturar</span>
+    </label>
+
+    <div class="ai-settings-actions">
+      <button id="btnTestAI" class="btn btn-ghost small-btn">🧪 Testar Conexão</button>
+      <button id="btnSaveAISettings" class="btn btn-primary small-btn" style="width: auto;">💾 Salvar</button>
+    </div>
+    <div id="aiTestResult" class="muted small" style="margin-top: 6px;"></div>
+  </section>
+
+  <section class="panel">
+    <div class="capture-actions">
+      <button id="btnSelect" class="btn btn-primary">🖱️ Selecionar área na página</button>
+      <button id="btnAnalyzeAI" class="btn btn-ai hidden">✨ Analisar print com IA</button>
+    </div>
+    <p id="captureInfo" class="muted small"></p>
+
+    <div id="aiStatus" class="ai-status-card hidden">
+      <div class="spinner"></div>
+      <span id="aiStatusText">Analisando imagem com inteligência artificial...</span>
+    </div>
+
+    <details id="screenshotDetails" class="hidden">
+      <summary>🖼️ Ver imagem do print capturado</summary>
+      <img id="screenshotImg" alt="Print capturado" />
+    </details>
+
+    <details id="rawDetails" class="hidden">
+      <summary>Ver texto bruto extraído</summary>
+      <pre id="rawText" class="raw-text"></pre>
+    </details>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header">
+      <h2>Pacotes de voo (ida + volta)</h2>
+      <div class="header-actions">
+        <button id="btnAddRow" class="btn btn-ghost small-btn">+ Pacote</button>
+        <button id="btnClearAll" class="btn btn-ghost small-btn danger">🗑️ Limpar tudo</button>
+      </div>
+    </div>
+    <p class="muted small">Cada linha é um pacote completo (ida + volta) com um preço só — do jeito que o site vende. Marque quais pacotes entram na proposta.</p>
+    <div class="table-wrap">
+      <table id="flightsTable">
+        <thead>
+          <tr>
+            <th rowspan="2"><input type="checkbox" id="selectAllCheckbox" checked title="Selecionar/desmarcar todos" /></th>
+            <th colspan="8" class="group-header group-ida">✈️ IDA</th>
+            <th colspan="8" class="group-header group-volta">✈️ VOLTA</th>
+            <th rowspan="2">Nacional /<br>Internacional</th>
+            <th rowspan="2">Preço total</th>
+            <th rowspan="2"></th>
+          </tr>
+          <tr>
+            <th>Cia</th><th>Origem</th><th>Destino</th><th>Data</th><th>Saída</th><th>Chegada</th><th>Duração</th><th>Paradas</th>
+            <th>Cia</th><th>Origem</th><th>Destino</th><th>Data</th><th>Saída</th><th>Chegada</th><th>Duração</th><th>Paradas</th>
+          </tr>
+        </thead>
+        <tbody id="flightsBody"></tbody>
+      </table>
+    </div>
+    <p id="emptyState" class="muted small">Nenhum pacote detectado ainda. Selecione uma área na página ou adicione um pacote manualmente.</p>
+  </section>
+
+  <section class="panel">
+    <h2>Dados do orçamento</h2>
+    <div class="field-grid">
+      <label>Nome do cliente
+        <input type="text" id="clientName" placeholder="Ex: João Silva" />
+      </label>
+      <label>Nome da agência (opcional)
+        <input type="text" id="agencyName" placeholder="Ex: Larian Viagens" />
+      </label>
+      <label>Markup (%)
+        <input type="number" id="markup" value="10" min="0" step="0.5" />
+      </label>
+      <label>Taxa de serviço fixa (R$)
+        <input type="number" id="serviceFee" value="0" min="0" step="1" />
+      </label>
+      <label>Validade da proposta
+        <input type="text" id="validity" placeholder="Ex: 48 horas" value="48 horas" />
+      </label>
+      <label>Nome do atendente
+        <input type="text" id="agentName" placeholder="Ex: Leandro" />
+      </label>
+      <label>Contato (telefone/WhatsApp)
+        <input type="text" id="agentContact" placeholder="Ex: (19) 99999-9999" />
+      </label>
+    </div>
+    <label class="full">Observações
+      <textarea id="notes" rows="2" placeholder="Ex: valores sujeitos a disponibilidade e alteração de tarifa"></textarea>
+    </label>
+  </section>
+
+  <section class="panel totals">
+    <div class="totals-row">
+      <span>Total base (selecionados)</span>
+      <strong id="totalBase">R$ 0,00</strong>
+    </div>
+    <div class="totals-row">
+      <span>Total com markup</span>
+      <strong id="totalMarkup">R$ 0,00</strong>
+    </div>
+    <div class="totals-row highlight">
+      <span>Total final (com taxa de serviço)</span>
+      <strong id="totalFinal">R$ 0,00</strong>
+    </div>
+  </section>
+
+  <section class="panel actions">
+    <button id="btnCopyText" class="btn btn-secondary">📋 Copiar texto para WhatsApp</button>
+    <button id="btnDownloadImage" class="btn btn-secondary">🖼️ Baixar imagem do orçamento</button>
+    <button id="btnDownloadPdf" class="btn btn-secondary">📄 Baixar PDF do orçamento</button>
+  </section>
+
+  <p class="footer-note">Extração automática pode conter erros — sempre confira os dados antes de enviar ao cliente.</p>
+
+  <canvas id="renderCanvas" class="hidden"></canvas>
+
+  <script src="vendor/jspdf.umd.min.js"></script>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
